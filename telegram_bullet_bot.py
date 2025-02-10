@@ -47,6 +47,7 @@ def generate_ai_response(prompt):
     return response[0]["generated_text"]
 
 # Comando para motivación IA
+
 async def motivate(update: Update, context: CallbackContext):
     if update.message.chat_id != ALLOWED_CHAT_ID:
         await update.message.reply_text("🚫 No tienes permiso para usar este bot.")
