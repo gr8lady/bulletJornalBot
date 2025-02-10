@@ -44,88 +44,31 @@ def add_user(user_id):
     conn.commit()
     conn.close()
 
-# Obtener nivel de usuario
-def get_level(xp):
-    if xp < 50:
-        return "🟢 Novato"
-    elif xp < 150:
-        return "🔵 Aprendiz"
-    elif xp < 300:
-        return "🟣 Experto"
-    else:
-        return "🟠 Maestro"
-
-# Comando para ver perfil de usuario
-async def profile(update: Update, context: CallbackContext):
-    if update.message.chat_id != ALLOWED_CHAT_ID:
-        await update.message.reply_text("🚫 No tienes permiso para usar este bot.")
-        return
-    
-    user_id = update.message.chat_id
+# Obtener misiones pendientes
+def get_missions(user_id):
     conn = sqlite3.connect("bullet_journal.db")
     cursor = conn.cursor()
-    cursor.execute("SELECT xp FROM users WHERE user_id = ?", (user_id,))
-    result = cursor.fetchone()
+    cursor.execute("SELECT mission FROM missions WHERE user_id = ? AND completed = 0", (user_id,))
+    missions = cursor.fetchall()
     conn.close()
+    return [m[0] for m in missions]
 
-    xp = result[0] if result else 0
-    level = get_level(xp)
-    await update.message.reply_text(f"🎖 Tu progreso:\n🔹 XP: {xp}\n🏆 Rango: {level}")
-
-# Comando de inicio
-async def start(update: Update, context: CallbackContext):
-    if update.message.chat_id != ALLOWED_CHAT_ID:
-        await update.message.reply_text("🚫 No tienes permiso para usar este bot.")
-        return
-    add_user(update.message.chat_id)
-    await update.message.reply_text("¡Bienvenido a tu Bullet Journal Bot! 🎯")
-
-# Comando para agregar una misión
-def add_mission(user_id, mission):
-    conn = sqlite3.connect("bullet_journal.db")
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO missions (user_id, mission, completed) VALUES (?, ?, ?)", (user_id, mission, 0))
-    conn.commit()
-    conn.close()
-
-async def add_mission_command(update: Update, context: CallbackContext):
-    if update.message.chat_id != ALLOWED_CHAT_ID:
-        await update.message.reply_text("🚫 No tienes permiso para usar este bot.")
-        return
-    
-    mission = " ".join(context.args)
-    if not mission:
-        await update.message.reply_text("⚠️ Debes escribir una misión. Usa: /agregar_mision <nombre>")
-        return
-    
-    add_mission(update.message.chat_id, mission)
-    await update.message.reply_text(f"✅ Misión agregada: {mission}")
-
-# Asignar una misión aleatoria
-async def assign_random_mission(update: Update, context: CallbackContext):
-    if update.message.chat_id != ALLOWED_CHAT_ID:
-        await update.message.reply_text("🚫 No tienes permiso para usar este bot.")
-        return
-    
-    missions = [
-        "📚 Leer 10 páginas de un libro",
-        "🏃‍♂️ Hacer 10 minutos de ejercicio",
-        "🧹 Limpiar tu escritorio",
-        "🎯 Planear tu día de mañana",
-        "💡 Aprender algo nuevo en 10 minutos"
-    ]
-    mission = random.choice(missions)
-    add_mission(update.message.chat_id, mission)
-    await update.message.reply_text(f"🎯 Nueva misión asignada: {mission}")
-
-#completar mision
+# Completar una misión y agregar XP
 def complete_mission(user_id, mission):
     conn = sqlite3.connect("bullet_journal.db")
     cursor = conn.cursor()
+    cursor.execute("SELECT * FROM missions WHERE user_id = ? AND mission = ? AND completed = 0", (user_id, mission))
+    result = cursor.fetchone()
+    
+    if not result:
+        conn.close()
+        return False  # La misión no existe o ya está completada
+
     cursor.execute("UPDATE missions SET completed = 1 WHERE user_id = ? AND mission = ?", (user_id, mission))
     cursor.execute("UPDATE users SET xp = xp + 10 WHERE user_id = ?", (user_id,))  # +10 XP por misión completada
     conn.commit()
     conn.close()
+    return True
 
 async def complete(update: Update, context: CallbackContext):
     if update.message.chat_id != ALLOWED_CHAT_ID:
@@ -137,31 +80,25 @@ async def complete(update: Update, context: CallbackContext):
         await update.message.reply_text("⚠️ Debes escribir el nombre de la misión que completaste. Usa: /completar <nombre>")
         return
     
-    complete_mission(update.message.chat_id, mission)
-    await update.message.reply_text(f"✅ Has completado la misión: {mission}! +10 XP")
+    if complete_mission(update.message.chat_id, mission):
+        await update.message.reply_text(f"✅ Has completado la misión: {mission}! +10 XP")
+    else:
+        await update.message.reply_text("⚠️ No encontré esa misión pendiente en tu lista.")
 
 # Ver misiones pendientes
 async def show_missions(update: Update, context: CallbackContext):
     if update.message.chat_id != ALLOWED_CHAT_ID:
         await update.message.reply_text("🚫 No tienes permiso para usar este bot.")
         return
+    
     user_id = update.message.chat_id
     missions = get_missions(user_id)
     if missions:
         await update.message.reply_text("📜 Tus misiones pendientes:\n" + "\n".join(missions))
     else:
         await update.message.reply_text("🎉 ¡No tienes misiones pendientes!")
-        return
-def get_missions(user_id):
-    conn = sqlite3.connect("bullet_journal.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT mission FROM missions WHERE user_id = ? AND completed = 0", (user_id,))
-    missions = cursor.fetchall()
-    conn.close()
-    return [m[0] for m in missions]
 
-
-
+# Configurar el bot
 def main():
     init_db()
     app = Application.builder().token(TOKEN).build()
