@@ -152,7 +152,16 @@ async def show_missions(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("🎉 ¡No tienes misiones pendientes!")
         return
-        
+def get_missions(user_id):
+    conn = sqlite3.connect("bullet_journal.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT mission FROM missions WHERE user_id = ? AND completed = 0", (user_id,))
+    missions = cursor.fetchall()
+    conn.close()
+    return [m[0] for m in missions]
+
+
+
 def main():
     init_db()
     app = Application.builder().token(TOKEN).build()
@@ -161,7 +170,7 @@ def main():
     app.add_handler(CommandHandler("agregar_mision", add_mission_command))
     app.add_handler(CommandHandler("mision", assign_random_mission))
     app.add_handler(CommandHandler("completar", complete))
-    app.add_handler(CommandHandler("misiones", show_missions)
+    app.add_handler(CommandHandler("misiones", show_missions))
     app.run_polling()
 
 if __name__ == "__main__":
