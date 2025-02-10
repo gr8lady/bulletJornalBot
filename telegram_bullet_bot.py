@@ -118,6 +118,40 @@ async def assign_random_mission(update: Update, context: CallbackContext):
     add_mission(update.message.chat_id, mission)
     await update.message.reply_text(f"🎯 Nueva misión asignada: {mission}")
 
+#completar mision
+def complete_mission(user_id, mission):
+    conn = sqlite3.connect("bullet_journal.db")
+    cursor = conn.cursor()
+    cursor.execute("UPDATE missions SET completed = 1 WHERE user_id = ? AND mission = ?", (user_id, mission))
+    cursor.execute("UPDATE users SET xp = xp + 10 WHERE user_id = ?", (user_id,))  # +10 XP por misión completada
+    conn.commit()
+    conn.close()
+
+async def complete(update: Update, context: CallbackContext):
+    if update.message.chat_id != ALLOWED_CHAT_ID:
+        await update.message.reply_text("🚫 No tienes permiso para usar este bot.")
+        return
+    
+    mission = " ".join(context.args)
+    if not mission:
+        await update.message.reply_text("⚠️ Debes escribir el nombre de la misión que completaste. Usa: /completar <nombre>")
+        return
+    
+    complete_mission(update.message.chat_id, mission)
+    await update.message.reply_text(f"✅ Has completado la misión: {mission}! +10 XP")
+
+# Ver misiones pendientes
+async def show_missions(update: Update, context: CallbackContext):
+    if update.message.chat_id != ALLOWED_CHAT_ID:
+        await update.message.reply_text("🚫 No tienes permiso para usar este bot.")
+        return
+    user_id = update.message.chat_id
+    missions = get_missions(user_id)
+    if missions:
+        await update.message.reply_text("📜 Tus misiones pendientes:\n" + "\n".join(missions))
+    else:
+        await update.message.reply_text("🎉 ¡No tienes misiones pendientes!")
+        
 def main():
     init_db()
     app = Application.builder().token(TOKEN).build()
@@ -125,6 +159,8 @@ def main():
     app.add_handler(CommandHandler("perfil", profile))
     app.add_handler(CommandHandler("agregar_mision", add_mission_command))
     app.add_handler(CommandHandler("mision", assign_random_mission))
+    app.add_handler(CommandHandler("completar", complete))
+    app.add_handler(CommandHandler("misiones", show_missions)
     app.run_polling()
 
 if __name__ == "__main__":
