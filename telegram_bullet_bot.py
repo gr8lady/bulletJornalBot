@@ -117,7 +117,7 @@ async def complete(update: Update, context: CallbackContext):
 # Configurar el bot
 def main():
     init_db()
-    TOKEN = "7127008615:AAEDL_T7wl9L92x9276meCYY3LPb-0Yop4E"*/
+    TOKEN ="7127008615:AAEDL_T7wl9L92x9276meCYY3LPb-0Yop4E"
     #TOKEN = os.getenv("TOKEN")
     app = Application.builder().token(TOKEN).build()
     
