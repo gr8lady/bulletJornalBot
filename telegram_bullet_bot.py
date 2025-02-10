@@ -37,12 +37,79 @@ def init_db():
     conn.commit()
     conn.close()
 
+async def assign_random_mission(update: Update, context: CallbackContext):
+    if update.message.chat_id != ALLOWED_CHAT_ID:
+        await update.message.reply_text("🚫 No tienes permiso para usar este bot.")
+        return
+    
+    missions = [
+        "📚 Leer 10 páginas de un libro",
+        "🏃‍♂️ Hacer 10 minutos de ejercicio",
+        "🧹 Limpiar tu escritorio",
+        "🎯 Planear tu día de mañana",
+        "💡 Aprender algo nuevo en 10 minutos"
+    ]
+    
+    mission = random.choice(missions)
+    add_mission(update.message.chat_id, mission)
+    await update.message.reply_text(f"🎯 Nueva misión asignada: {mission}")
+    
+def add_mission(user_id, mission):
+    conn = sqlite3.connect("bullet_journal.db")
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO missions (user_id, mission, completed) VALUES (?, ?, ?)", (user_id, mission, 0))
+    conn.commit()
+    conn.close()
+
+
+async def add_mission_command(update: Update, context: CallbackContext):
+    if update.message.chat_id != ALLOWED_CHAT_ID:
+        await update.message.reply_text("🚫 No tienes permiso para usar este bot.")
+        return
+    
+    mission = " ".join(context.args)
+    if not mission:
+        await update.message.reply_text("⚠️ Debes escribir una misión. Usa: /agregar_mision <nombre>")
+        return
+    
+    add_mission(update.message.chat_id, mission)
+    await update.message.reply_text(f"✅ Misión agregada: {mission}")
+
+
+async def daily_mission(update: Update, context: CallbackContext):
+    if update.message.chat_id != ALLOWED_CHAT_ID:
+        await update.message.reply_text("🚫 No tienes permiso para usar este bot.")
+        return
+    
+    user_id = update.message.chat_id
+    missions = [
+        "📚 Leer 10 páginas de un libro",
+        "🏃‍♂️ Hacer 10 minutos de ejercicio",
+        "🧹 Limpiar tu escritorio",
+        "🎯 Planear tu día de mañana",
+        "💡 Aprender algo nuevo en 10 minutos"
+    ]
+    
+    mission = random.choice(missions)
+    add_mission(user_id, mission)
+    await update.message.reply_text(f"Tu misión de hoy: {mission}")
+
 def add_user(user_id):
     conn = sqlite3.connect("bullet_journal.db")
     cursor = conn.cursor()
     cursor.execute("INSERT OR IGNORE INTO users (user_id, xp) VALUES (?, ?)", (user_id, 0))
     conn.commit()
     conn.close()
+
+def get_level(xp):
+    if xp < 50:
+        return "🟢 Novato"
+    elif xp < 150:
+        return "🔵 Aprendiz"
+    elif xp < 300:
+        return "🟣 Experto"
+    else:
+        return "🟠 Maestro"
 
 # Obtener misiones pendientes
 def get_missions(user_id):
@@ -85,6 +152,7 @@ async def complete(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("⚠️ No encontré esa misión pendiente en tu lista.")
 
+
 # Ver misiones pendientes
 async def show_missions(update: Update, context: CallbackContext):
     if update.message.chat_id != ALLOWED_CHAT_ID:
@@ -107,7 +175,24 @@ async def start(update: Update, context: CallbackContext):
     add_user(update.message.chat_id)
     await update.message.reply_text("¡Bienvenido a tu Bullet Journal Bot! 🎯")
 
+
+async def profile(update: Update, context: CallbackContext):
+    if update.message.chat_id != ALLOWED_CHAT_ID:
+        await update.message.reply_text("🚫 No tienes permiso para usar este bot.")
+        return
     
+    user_id = update.message.chat_id
+    conn = sqlite3.connect("bullet_journal.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT xp FROM users WHERE user_id = ?", (user_id,))
+    result = cursor.fetchone()
+    conn.close()
+
+    xp = result[0] if result else 0
+    level = get_level(xp)
+    await update.message.reply_text(f"🎖 Tu progreso:\n🔹 XP: {xp}\n🏆 Rango: {level}")
+
+
 # Configurar el bot
 def main():
     init_db()
