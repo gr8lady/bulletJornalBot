@@ -3,6 +3,7 @@ import sqlite3
 import schedule
 import time
 import asyncio
+import os
 
 try:
     from telegram import Update
@@ -15,7 +16,8 @@ except ModuleNotFoundError:
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # Configurar el chat permitido
-ALLOWED_CHAT_ID = 7012719413  # Reemplaza con tu chat ID específico
+ #ALLOWED_CHAT_ID = 7012719413  # Reemplaza con tu chat ID específico
+ ALLOWED_CHAT_ID = os.getenv("ALLOWED_CHAT_ID")
 
 # Conectar a la base de datos SQLite
 def init_db():
@@ -115,7 +117,8 @@ async def complete(update: Update, context: CallbackContext):
 # Configurar el bot
 def main():
     init_db()
-    TOKEN = "7127008615:AAEDL_T7wl9L92x9276meCYY3LPb-0Yop4E"
+  # /* TOKEN = "7127008615:AAEDL_T7wl9L92x9276meCYY3LPb-0Yop4E"*/
+    TOKEN = os.getenv("TOKEN")
     app = Application.builder().token(TOKEN).build()
     
     app.add_handler(CommandHandler("start", start))
