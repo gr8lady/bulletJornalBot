@@ -5,6 +5,7 @@ import asyncio
 import random
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
+from transformers import pipeline
 
 # Configurar logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -13,7 +14,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 TOKEN = "7127008615:AAEDL_T7wl9L92x9276meCYY3LPb-0Yop4E"
 ALLOWED_CHAT_ID = 7012719413  # Reemplaza con tu chat ID
 #DEEPSEEK_API_KEY = "TU_API_KEY_DEEPSEEK"  # Agrega tu API Key aquí
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+#DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 
 # Uso de variables de entorno (descomentar para producción)
 # TOKEN = os.getenv("TOKEN")
@@ -39,20 +40,18 @@ def init_db():
     conn.commit()
     conn.close()
 
-#conectar a DeepSeek
+ai_pipeline = pipeline("text-generation", model="mistralai/Mistral-7B-Instruct-v0.1")
+
 def generate_ai_response(prompt):
-    url = "https://api.deepseek.com/v1/chat/completions"  # URL de ejemplo, puede cambiar
-    headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
-    data = {"model": "deepseek-chat", "messages": [{"role": "user", "content": prompt}]}
-    response = requests.post(url, headers=headers, json=data)
-    return response.json().get("choices", [{}])[0].get("message", {}).get("content", "No response.")
+    response = ai_pipeline(prompt, max_length=50, do_sample=True)
+    return response[0]["generated_text"]
 
 # Comando para motivación IA
 async def motivate(update: Update, context: CallbackContext):
     if update.message.chat_id != ALLOWED_CHAT_ID:
         await update.message.reply_text("🚫 No tienes permiso para usar este bot.")
         return
-    
+
     prompt = "Dame un mensaje motivacional para alguien que está completando misiones de productividad."
     ai_response = generate_ai_response(prompt)
     await update.message.reply_text(f"🤖 IA dice: {ai_response}")
