@@ -17,7 +17,8 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 # Configurar el chat permitido
  #ALLOWED_CHAT_ID = 7012719413  # Reemplaza con tu chat ID específico
- ALLOWED_CHAT_ID = os.getenv("ALLOWED_CHAT_ID")
+ TOKEN = os.getenv("TOKEN")
+ ALLOWED_CHAT_ID = int(os.getenv("ALLOWED_CHAT_ID", "0"))
 
 # Conectar a la base de datos SQLite
 def init_db():
@@ -118,7 +119,7 @@ async def complete(update: Update, context: CallbackContext):
 def main():
     init_db()
   # /* TOKEN = "7127008615:AAEDL_T7wl9L92x9276meCYY3LPb-0Yop4E"*/
-    TOKEN = os.getenv("TOKEN")
+   # TOKEN = os.getenv("TOKEN")
     app = Application.builder().token(TOKEN).build()
     
     app.add_handler(CommandHandler("start", start))
