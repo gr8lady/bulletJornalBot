@@ -98,6 +98,16 @@ async def show_missions(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("🎉 ¡No tienes misiones pendientes!")
 
+
+
+async def start(update: Update, context: CallbackContext):
+    if update.message.chat_id != ALLOWED_CHAT_ID:
+        await update.message.reply_text("🚫 No tienes permiso para usar este bot.")
+        return
+    add_user(update.message.chat_id)
+    await update.message.reply_text("¡Bienvenido a tu Bullet Journal Bot! 🎯")
+
+    
 # Configurar el bot
 def main():
     init_db()
