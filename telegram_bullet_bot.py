@@ -16,8 +16,8 @@ except ModuleNotFoundError:
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # Configurar el chat permitido
- #ALLOWED_CHAT_ID = 7012719413  # Reemplaza con tu chat ID específico
-ALLOWED_CHAT_ID = int(os.getenv("ALLOWED_CHAT_ID", "0"))
+ALLOWED_CHAT_ID = 7012719413  # Reemplaza con tu chat ID específico
+#ALLOWED_CHAT_ID = int(os.getenv("ALLOWED_CHAT_ID", "0"))
 
 # Conectar a la base de datos SQLite
 def init_db():
