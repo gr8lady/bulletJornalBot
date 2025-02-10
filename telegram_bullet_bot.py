@@ -40,7 +40,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-ai_pipeline = pipeline("text-generation", model="mistralai/Mistral-7B-Instruct-v0.1")
+ai_pipeline = pipeline("text-generation", model="mistralai/Mistral-7B-v0.1")
 
 def generate_ai_response(prompt):
     response = ai_pipeline(prompt, max_length=50, do_sample=True)
