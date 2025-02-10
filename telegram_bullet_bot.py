@@ -151,6 +151,7 @@ async def show_missions(update: Update, context: CallbackContext):
         await update.message.reply_text("📜 Tus misiones pendientes:\n" + "\n".join(missions))
     else:
         await update.message.reply_text("🎉 ¡No tienes misiones pendientes!")
+        return
         
 def main():
     init_db()
