@@ -4,7 +4,6 @@ import sqlite3
 import asyncio
 import random
 import requests
-from transformers import pipeline
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 
@@ -14,10 +13,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 # Hardcoded values (para debugging)
 TOKEN = "TU_BOT_TOKEN"
 ALLOWED_CHAT_ID = 7012719413  # Reemplaza con tu chat ID
-
-# Uso de variables de entorno (para producción)
-# TOKEN = os.getenv("TOKEN")
-# ALLOWED_CHAT_ID = int(os.getenv("ALLOWED_CHAT_ID", "0"))
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # Lee el token desde Railway
 
 # Conectar a la base de datos SQLite
 def init_db():
@@ -148,12 +144,13 @@ async def show_missions(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("🎉 ¡No tienes misiones pendientes!")
 
-# ✅ **IA con Hugging Face**
-ai_pipeline = pipeline("text-generation", model="mistralai/Mistral-7B-v0.1")
-
+# ✅ **IA con OpenAI**
 def generate_ai_response(prompt):
-    response = ai_pipeline(prompt, max_length=50, do_sample=True)
-    return response[0]["generated_text"]
+    url = "https://api.openai.com/v1/chat/completions"
+    headers = {"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"}
+    data = {"model": "gpt-3.5-turbo", "messages": [{"role": "user", "content": prompt}]}
+    response = requests.post(url, headers=headers, json=data)
+    return response.json().get("choices", [{}])[0].get("message", {}).get("content", "No response.")
 
 # Comando para motivación IA
 async def motivate(update: Update, context: CallbackContext):
