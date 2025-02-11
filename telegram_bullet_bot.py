@@ -11,7 +11,7 @@ from telegram.ext import Application, CommandHandler, CallbackContext
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # Hardcoded values (para debugging)
-TOKEN = "TU_BOT_TOKEN"
+TOKEN = "7127008615:AAEDL_T7wl9L92x9276meCYY3LPb-0Yop4E"
 ALLOWED_CHAT_ID = 7012719413  # Reemplaza con tu chat ID
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # Lee el token desde Railway
 
