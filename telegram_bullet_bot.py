@@ -4,6 +4,7 @@ import sqlite3
 import random
 import requests
 import datetime
+import time
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 
@@ -313,6 +314,7 @@ schedule_task_update()
 
 if __name__ == "__main__":
     init_db()  # ✅ Asegurar que la base de datos se inicializa antes de todo
+    time.sleep(2)  # Esperar un poco antes de lanzar el bot
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("perfil", perfil))
     app.add_handler(CommandHandler("agregar_area", add_area))
