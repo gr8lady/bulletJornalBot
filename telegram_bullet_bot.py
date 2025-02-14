@@ -10,8 +10,8 @@ from telegram.ext import Application, CommandHandler, CallbackContext
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # Variables de entorno y configuración
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")  # Almacena tu token de forma segura en variables de entorno
-ALLOWED_CHAT_ID = int(os.getenv("ALLOWED_CHAT_ID", "0"))  # Configurable desde el entorno
+TOKEN = "7127008615:AAEDL_T7wl9L92x9276meCYY3LPb-0Yop4E"
+ALLOWED_CHAT_ID = 7012719413  # Reemplaza con tu chat ID
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Conectar a la base de datos SQLite
