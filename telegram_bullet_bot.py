@@ -18,14 +18,18 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DB_FILE = "bullet_journal.db"
 
 def init_db():
-    with sqlite3.connect(DB_FILE) as conn:
+    with sqlite3.connect("bullet_journal.db") as conn:
         cursor = conn.cursor()
+
+        # 📌 Tabla de usuarios (XP y referencia a misiones)
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY,
             xp INTEGER DEFAULT 0
         )
         """)
+
+        # 📌 Tabla de misiones asignadas a los usuarios
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS missions (
             user_id INTEGER,
@@ -34,7 +38,61 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(user_id)
         )
         """)
+
+        # 📌 Tabla de perfiles para el sistema de roles
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS profiles (
+            user_id INTEGER PRIMARY KEY,
+            name TEXT DEFAULT 'Humano Promedio',
+            xp INTEGER DEFAULT 0,
+            class TEXT DEFAULT 'Humano Promedio'
+        )
+        """)
         conn.commit()
+
+
+# 📌 2. Registrar Usuarios Nuevos con el Rango "Humano Promedio"
+def register_user(user_id):
+    conn = sqlite3.connect("bullet_journal.db")
+    cursor = conn.cursor()
+    cursor.execute("INSERT OR IGNORE INTO profiles (user_id) VALUES (?)", (user_id,))
+    conn.commit()
+    conn.close()
+
+# 📌 3. Comando `/perfil` para ver el progreso del usuario
+async def perfil(update: Update, context: CallbackContext):
+    user_id = update.message.chat_id
+    conn = sqlite3.connect("bullet_journal.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT name, xp, class FROM profiles WHERE user_id = ?", (user_id,))
+    profile = cursor.fetchone()
+    conn.close()
+
+    if profile:
+        name, xp, user_class = profile
+        await update.message.reply_text(f"👤 **Perfil de {name}**\n🔹 XP: {xp}\n🏆 Clase: {user_class}")
+    else:
+        await update.message.reply_text("⚠️ No tienes un perfil aún. Usa /start para registrarte.")
+
+# 📌 4. Comando `/set_nombre` para personalizar el nombre del usuario
+async def set_nombre(update: Update, context: CallbackContext):
+    user_id = update.message.chat_id
+    new_name = " ".join(context.args)
+    if not new_name:
+        await update.message.reply_text("⚠️ Debes escribir un nombre. Usa: /set_nombre <nombre>")
+        return
+    
+    conn = sqlite3.connect("bullet_journal.db")
+    cursor = conn.cursor()
+    cursor.execute("UPDATE profiles SET name = ? WHERE user_id = ?", (new_name, user_id))
+    conn.commit()
+    conn.close()
+
+    await update.message.reply_text(f"✅ Tu nombre ha sido actualizado a: {new_name}")
+
+# 📌 5. Agregar los comandos al bot
+from telegram.ext import Application  #final de la funcion
+
 
 def execute_query(query, params=(), fetch_one=False, fetch_all=False):
     with sqlite3.connect(DB_FILE) as conn:
@@ -143,6 +201,8 @@ def main():
     app.add_handler(CommandHandler("completar", complete))
     app.add_handler(CommandHandler("misiones", show_missions))
     app.add_handler(CommandHandler("motivacion", motivate))
+    app.add_handler(CommandHandler("perfil", perfil))
+    app.add_handler(CommandHandler("set_nombre", set_nombre))
     app.run_polling()
 
 if __name__ == "__main__":
