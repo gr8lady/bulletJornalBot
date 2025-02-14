@@ -60,7 +60,7 @@ def init_db():
             FOREIGN KEY (area_id) REFERENCES areas(id)
         )""")
 
-        # Tabla de tareas dentro de las misiones
+        # ✅ Tabla de tareas dentro de las misiones
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
