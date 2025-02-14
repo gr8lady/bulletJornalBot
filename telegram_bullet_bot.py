@@ -27,7 +27,6 @@ def connect_db():
 def init_db():
     with connect_db() as conn:
         cursor = conn.cursor()
-
         # Tabla de usuarios
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
