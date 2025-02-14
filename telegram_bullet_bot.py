@@ -312,6 +312,7 @@ schedule_task_update()
 
 
 if __name__ == "__main__":
+    init_db()  # ✅ Asegurar que la base de datos se inicializa antes de todo
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("perfil", perfil))
     app.add_handler(CommandHandler("agregar_area", add_area))
@@ -322,5 +323,6 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("agregar_tarea", add_task))
     app.add_handler(CommandHandler("completar_tarea", complete_task))
+    app.run_polling()
 
     app.run_polling()
