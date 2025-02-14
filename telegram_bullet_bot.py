@@ -190,7 +190,24 @@ async def motivate(update: Update, context: CallbackContext):
     prompt = "Dame un mensaje motivacional para alguien que está completando misiones de productividad."
     ai_response = generate_ai_response(prompt)
     await update.message.reply_text(f"🤖 IA dice: {ai_response}")
+# fin de motivate 
+async def help_command(update: Update, context: CallbackContext):
+    help_text = """
+    📜 **Comandos Disponibles:**
+    /start - Iniciar y registrarte en el juego
+    /perfil - Ver tu progreso y clase actual
+    /set_nombre <nombre> - Cambiar tu nombre en el juego
+    /help - Mostrar esta ayuda
+    /agregar_mision - agrega tareas 
+    /mision - obtener una mision random
+    /completar - marcar como completa la tarea
+    /misiones - listar las misiones pendientes
+    """
+    await update.message.reply_text(help_text)
+# fin de la funcion de ayuda
 
+
+#inicio de main
 def main():
     init_db()
     app = Application.builder().token(TOKEN).build()
