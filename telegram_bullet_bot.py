@@ -119,11 +119,10 @@ def complete_mission(user_id, mission):
     return True
 
 async def start(update: Update, context: CallbackContext):
-    if update.message.chat_id != ALLOWED_CHAT_ID:
-        await update.message.reply_text("🚫 No tienes permiso para usar este bot.")
-        return
-    add_user(update.message.chat_id)
-    await update.message.reply_text("¡Bienvenido a tu Bullet Journal Bot! 🎯")
+    user_id = update.message.chat_id
+    register_user(user_id)  # 📌 Asegurarse de registrar al usuario en la DB
+
+    await update.message.reply_text("🎯 ¡Bienvenido a Bullet Journal Quest! Tu aventura comienza como 'Humano Promedio'. Usa /perfil para ver tu estado.")
 
 def add_mission(user_id, mission):
     execute_query("INSERT INTO missions (user_id, mission, completed) VALUES (?, ?, 0)", (user_id, mission))
