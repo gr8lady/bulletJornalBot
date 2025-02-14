@@ -23,7 +23,17 @@ DB_FILE = "bullet_journal.db"
 def init_db():
     with sqlite3.connect(DB_FILE) as conn:
         cursor = conn.cursor()
-
+          # ✅ Tabla de tareas dentro de las misiones
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mission_id INTEGER,
+            task TEXT,
+            xp INTEGER DEFAULT 10,
+            status TEXT DEFAULT 'pendiente',
+            deadline TEXT DEFAULT NULL,
+            FOREIGN KEY (mission_id) REFERENCES missions(id)
+        )""")
         # Tabla de usuarios
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -62,17 +72,6 @@ def init_db():
             FOREIGN KEY (area_id) REFERENCES areas(id)
         )""")
 
-        # ✅ Tabla de tareas dentro de las misiones
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS tasks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            mission_id INTEGER,
-            task TEXT,
-            xp INTEGER DEFAULT 10,
-            status TEXT DEFAULT 'pendiente',
-            deadline TEXT DEFAULT NULL,
-            FOREIGN KEY (mission_id) REFERENCES missions(id)
-        )""")
         conn.commit()
 
 # fin de la funcion de creacion de tablas
