@@ -301,10 +301,16 @@ def update_task_status():
         cursor.execute("UPDATE tasks SET status = 'zombie' WHERE deadline < ? AND status = 'pendiente'", (now,))
         conn.commit()
 
+# Programar la revisión automática cada 24 horas
+def schedule_task_update():
+    update_task_status()
+    threading.Timer(86400, schedule_task_update).start()
+schedule_task_update()
 
 if __name__ == "__main__":
     init_db()  # ✅ Asegurar que la base de datos se inicializa antes de todo
     time.sleep(2)  # Esperar un poco antes de lanzar el bot
+    schedule_task_update()  # ✅ Iniciar la actualización automática después de que la DB esté lista
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("perfil", perfil))
     app.add_handler(CommandHandler("agregar_area", add_area))
@@ -317,9 +323,5 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("completar_tarea", complete_task))
     app.run_polling()
 
-# Programar la revisión automática cada 24 horas
-def schedule_task_update():
-    update_task_status()
-    threading.Timer(86400, schedule_task_update).start()
-schedule_task_update()
+
 
