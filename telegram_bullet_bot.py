@@ -177,8 +177,7 @@ async def help_command(update: Update, context: CallbackContext):
 
 async def start(update: Update, context: CallbackContext):
     user_id = update.message.chat_id
-
-     with connect_db() as conn:
+    with connect_db() as conn:
         cursor = conn.cursor()
         cursor.execute("INSERT OR IGNORE INTO users (user_id) VALUES (?)", (user_id,))
         cursor.execute("INSERT OR IGNORE INTO profiles (user_id, name, xp, class) VALUES (?, 'Humano Promedio', 0, 'Humano Promedio')", (user_id,))
