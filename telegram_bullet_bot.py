@@ -2,7 +2,7 @@ import os
 import logging
 import sqlite3
 import random
-import requests0
+import requests
 import datetime
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
