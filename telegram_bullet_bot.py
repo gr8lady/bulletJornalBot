@@ -2,7 +2,8 @@ import os
 import logging
 import sqlite3
 import random
-import requests
+import requests0
+import datetime
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 
@@ -80,14 +81,12 @@ async def set_nombre(update: Update, context: CallbackContext):
     new_name = " ".join(context.args)
     if not new_name:
         await update.message.reply_text("⚠️ Debes escribir un nombre. Usa: /set_nombre <nombre>")
-        return
-    
+        return 
     conn = sqlite3.connect("bullet_journal.db")
     cursor = conn.cursor()
     cursor.execute("UPDATE profiles SET name = ? WHERE user_id = ?", (new_name, user_id))
     conn.commit()
     conn.close()
-
     await update.message.reply_text(f"✅ Tu nombre ha sido actualizado a: {new_name}")
 
 # 📌 5. Agregar los comandos al bot
@@ -137,6 +136,65 @@ async def add_mission_command(update: Update, context: CallbackContext):
         return
     add_mission(update.message.chat_id, mission)
     await update.message.reply_text(f"✅ Misión agregada: {mission}")
+# fin del add mission command
+
+# 📌 5. Agregar una misión con prioridad y deadline
+async def add_mission(update: Update, context: CallbackContext):
+    user_id = update.message.chat_id
+    args = context.args
+    if len(args) < 2:
+        await update.message.reply_text("⚠️ Uso: /agregar_mision <prioridad (Alta/Media/Baja)> <nombre de la misión>")
+        return
+    
+    priority = args[0].capitalize()
+    mission = " ".join(args[1:])
+    deadline = (datetime.datetime.now() + datetime.timedelta(days=1)).isoformat()
+    
+    with sqlite3.connect("bullet_journal.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO missions (user_id, mission, priority, deadline, completed) VALUES (?, ?, ?, ?, 0)", (user_id, mission, priority, deadline))
+        conn.commit()
+    
+    await update.message.reply_text(f"✅ Misión agregada: {mission} (Prioridad: {priority})")
+
+# 📌 1. Agregar una misión con prioridad y deadline
+def add_mission_db(user_id, mission, priority="Media"):
+    deadline = (datetime.datetime.now() + datetime.timedelta(days=1)).isoformat()
+    with sqlite3.connect("bullet_journal.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO missions (user_id, mission, priority, deadline, completed) VALUES (?, ?, ?, ?, 0)", (user_id, mission, priority, deadline))
+        conn.commit()
+
+# 📌 2. Obtener misiones activas del usuario
+def get_missions_db(user_id):
+    with sqlite3.connect("bullet_journal.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT mission, priority, deadline FROM missions WHERE user_id = ? AND completed = 0", (user_id,))
+        missions = cursor.fetchall()
+    return missions
+
+# 📌 3. Completar una misión y actualizar XP
+def complete_mission_db(user_id, mission):
+    with sqlite3.connect("bullet_journal.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT priority, deadline FROM missions WHERE user_id = ? AND mission = ? AND completed = 0", (user_id, mission))
+        mission_data = cursor.fetchone()
+        
+        if not mission_data:
+            return None, None
+        
+        priority, deadline = mission_data
+        now = datetime.datetime.now()
+        deadline_date = datetime.datetime.fromisoformat(deadline) if deadline else now
+        xp_gain = {"Alta": 20, "Media": 10, "Baja": 5}.get(priority, 10)
+        penalty = -5 if now > deadline_date else 0
+        
+        cursor.execute("UPDATE missions SET completed = 1, completion_date = ? WHERE user_id = ? AND mission = ?", (now.isoformat(), user_id, mission))
+        cursor.execute("UPDATE profiles SET xp = xp + ? WHERE user_id = ?", (xp_gain + penalty, user_id))
+        conn.commit()
+    
+    return xp_gain, penalty
+
 
 async def assign_random_mission(update: Update, context: CallbackContext):
     if update.message.chat_id != ALLOWED_CHAT_ID:
@@ -166,15 +224,20 @@ async def complete(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("⚠️ No encontré esa misión pendiente en tu lista.")
 
+# 📌 6. Ver misiones activas
 async def show_missions(update: Update, context: CallbackContext):
-    if update.message.chat_id != ALLOWED_CHAT_ID:
-        await update.message.reply_text("🚫 No tienes permiso para usar este bot.")
-        return
-    missions = get_missions(update.message.chat_id)
+    user_id = update.message.chat_id
+    with sqlite3.connect("bullet_journal.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT mission, priority, deadline FROM missions WHERE user_id = ? AND completed = 0", (user_id,))
+        missions = cursor.fetchall()
+    
     if missions:
-        await update.message.reply_text("📜 Tus misiones pendientes:\n" + "\n".join(missions))
+        response = "📜 **Misiones Pendientes:**\n" + "\n".join([f"🎯 {m[0]} - {m[1]} (Vence: {m[2]})" for m in missions])
     else:
-        await update.message.reply_text("🎉 ¡No tienes misiones pendientes!")
+        response = "🎉 ¡No tienes misiones pendientes!"
+    
+    await update.message.reply_text(response)
 
 def generate_ai_response(prompt):
     url = "https://api.openai.com/v1/chat/completions"
@@ -191,6 +254,8 @@ async def motivate(update: Update, context: CallbackContext):
     ai_response = generate_ai_response(prompt)
     await update.message.reply_text(f"🤖 IA dice: {ai_response}")
 # fin de motivate 
+
+
 async def help_command(update: Update, context: CallbackContext):
     help_text = """
     📜 **Comandos Disponibles:**
@@ -212,13 +277,12 @@ def main():
     init_db()
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("agregar_mision", add_mission_command))
-    app.add_handler(CommandHandler("mision", assign_random_mission))
-    app.add_handler(CommandHandler("completar", complete))
-    app.add_handler(CommandHandler("misiones", show_missions))
-    app.add_handler(CommandHandler("motivacion", motivate))
     app.add_handler(CommandHandler("perfil", perfil))
     app.add_handler(CommandHandler("set_nombre", set_nombre))
+    app.add_handler(CommandHandler("agregar_mision", add_mission))
+    app.add_handler(CommandHandler("misiones", show_missions))
+    app.add_handler(CommandHandler("completar", complete_mission))
+    app.add_handler(CommandHandler("help", help_command))
     app.run_polling()
 
 if __name__ == "__main__":
