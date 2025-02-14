@@ -1,4 +1,5 @@
 import os
+import threading
 import logging
 import sqlite3
 import random
@@ -279,7 +280,6 @@ async def complete_task(update: Update, context: CallbackContext):
     if not task_name:
         await update.message.reply_text("⚠️ Uso: /completar_tarea <nombre>")
         return
-
     with sqlite3.connect(DB_FILE) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT id, xp FROM tasks WHERE task = ? AND status = 'pendiente'", (task_name,))
@@ -287,12 +287,10 @@ async def complete_task(update: Update, context: CallbackContext):
         if not task:
             await update.message.reply_text("⚠️ No encontré esa tarea pendiente.")
             return
-
         task_id, xp = task
         cursor.execute("UPDATE tasks SET status = 'completado' WHERE id = ?", (task_id,))
         cursor.execute("UPDATE users SET xp = xp + ? WHERE user_id = ?", (xp, user_id))
         conn.commit()
-
     await update.message.reply_text(f"✅ Tarea '{task_name}' completada. +{xp} XP.")
 
 # Función automática para actualizar tareas a 'zombie' si expiran
@@ -302,14 +300,6 @@ def update_task_status():
         now = datetime.datetime.now().isoformat()
         cursor.execute("UPDATE tasks SET status = 'zombie' WHERE deadline < ? AND status = 'pendiente'", (now,))
         conn.commit()
-
-# Programar la revisión automática cada 24 horas
-import threading
-def schedule_task_update():
-    update_task_status()
-    threading.Timer(86400, schedule_task_update).start()
-
-schedule_task_update()
 
 
 if __name__ == "__main__":
@@ -327,4 +317,9 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("completar_tarea", complete_task))
     app.run_polling()
 
-    app.run_polling()
+# Programar la revisión automática cada 24 horas
+def schedule_task_update():
+    update_task_status()
+    threading.Timer(86400, schedule_task_update).start()
+schedule_task_update()
+
