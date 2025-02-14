@@ -87,9 +87,16 @@ async def add_area(update: Update, context: CallbackContext):
         await update.message.reply_text("⚠️ Debes escribir un nombre de área. Usa: /agregar_area <nombre>")
         return
 
-     with connect_db() as conn:
+# Función para agregar un área de vida (ciudad)
+async def add_area(update: Update, context: CallbackContext):
+    area_name = " ".join(context.args)
+    if not area_name:
+        await update.message.reply_text("⚠️ Debes escribir un nombre de área. Usa: /agregar_area <nombre>")
+        return
+
+    with connect_db() as conn:  # ✅ Identación corregida
         cursor = conn.cursor()
-        cursor.execute("INSERT OR IGNORE INTO areas (name) VALUES (?)", (area_name,))
+        cursor.execute("INSERT INTO areas (name) VALUES (%s) ON CONFLICT DO NOTHING", (area_name,))
         conn.commit()
 
     await update.message.reply_text(f"🏙️ Área '{area_name}' agregada.")
