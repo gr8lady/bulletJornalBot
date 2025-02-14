@@ -11,8 +11,8 @@ from telegram.ext import Application, CommandHandler, CallbackContext
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # Variables de entorno y configuración
-TOKEN = "712-----p4E"
-ALLOWED_CHAT_ID = 70----13  # Reemplaza con tu chat ID
+TOKEN = "7127008615:AAEDL_T7wl9L92x9276meCYY3LPb-0Yop4E"
+ALLOWED_CHAT_ID = 7012719413  # Reemplaza con tu chat ID
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Conectar a la base de datos SQLite
@@ -144,9 +144,12 @@ async def help_command(update: Update, context: CallbackContext):
     📜 **Comandos Disponibles:**
     /start - Iniciar y registrarte en el juego
     /perfil - Ver tu progreso y clase actual
-    /agregar_area - Agregar una nueva área de vida
-    /agregar_mision - Agregar una misión con área y prioridad
-    /completar_mision - Marcar una misión como completada
+    /status - Ver el estado general de tu progreso
+    /agregar_area <nombre> - Agregar una nueva área de vida
+    /agregar_mision <Área> <Prioridad (Alta/Media/Baja)> <Nombre> - Agregar una misión
+    /completar_mision <nombre> - Marcar una misión como completada
+    /agregar_tarea <misión> <tarea> <días> - Agregar una tarea a una misión
+    /completar_tarea <tarea> - Marcar una tarea como completada
     /help - Mostrar esta ayuda
     """
     await update.message.reply_text(help_text)
@@ -179,6 +182,132 @@ async def perfil(update: Update, context: CallbackContext):
         await update.message.reply_text(f"👤 **Perfil de {name}**\n🔹 XP: {xp}\n🏆 Clase: {user_class}")
     else:
         await update.message.reply_text("⚠️ No tienes un perfil aún. Usa /start para registrarte.")
+# inicio funcion  de status de las misiones
+
+async def status(update: Update, context: CallbackContext):
+    user_id = update.message.chat_id
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+
+    # Obtener información del usuario
+    cursor.execute("SELECT name, xp, class FROM profiles WHERE user_id = ?", (user_id,))
+    profile = cursor.fetchone()
+
+    # Obtener estado de las áreas (ciudades)
+    cursor.execute("SELECT name, health FROM areas")
+    areas = cursor.fetchall()
+
+    # Obtener misiones activas
+    cursor.execute("SELECT mission, completed FROM missions WHERE user_id = ? AND completed = 0", (user_id,))
+    missions = cursor.fetchall()
+
+    # Obtener tareas pendientes y zombies
+    cursor.execute("SELECT task, status FROM tasks WHERE status IN ('pendiente', 'zombie')")
+    tasks = cursor.fetchall()
+
+    conn.close()
+
+    # Construir la respuesta
+    response = f"📜 **Estado General**\n"
+    if profile:
+        name, xp, user_class = profile
+        response += f"👤 **{name}**\n🔹 XP: {xp}\n🏆 Clase: {user_class}\n\n"
+
+    response += "🏙️ **Estado de Ciudades:**\n"
+    for area_name, health in areas:
+        response += f" - {area_name}: {health} ❤️\n"
+
+    response += "\n🎯 **Misiones Activas:**\n"
+    if missions:
+        for mission, completed in missions:
+            response += f" - {mission} {'✅' if completed else '❌'}\n"
+    else:
+        response += " - No hay misiones activas.\n"
+
+    response += "\n📝 **Tareas Pendientes:**\n"
+    if tasks:
+        for task, status in tasks:
+            emoji = "🧟" if status == "zombie" else "📌"
+            response += f" - {emoji} {task}\n"
+    else:
+        response += " - No hay tareas pendientes.\n"
+
+    await update.message.reply_text(response)
+# fin de la funcion de status de las misiones
+
+# Modificar la tabla de tareas para agregar el deadline
+def update_db():
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+        ALTER TABLE tasks ADD COLUMN deadline TEXT DEFAULT NULL
+        """)
+        conn.commit()
+
+# Función para agregar una tarea con deadline
+async def add_task(update: Update, context: CallbackContext):
+    user_id = update.message.chat_id
+    args = context.args
+    if len(args) < 3:
+        await update.message.reply_text("⚠️ Uso: /agregar_tarea <misión> <tarea> <días para completar>")
+        return
+
+    mission_name, task_name, days = args[0], " ".join(args[1:-1]), int(args[-1])
+    deadline = (datetime.datetime.now() + datetime.timedelta(days=days)).isoformat()
+
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM missions WHERE user_id = ? AND mission = ? AND completed = 0", (user_id, mission_name))
+        mission = cursor.fetchone()
+        if not mission:
+            await update.message.reply_text("⚠️ No encontré esa misión activa.")
+            return
+
+        mission_id = mission[0]
+        cursor.execute("INSERT INTO tasks (mission_id, task, deadline) VALUES (?, ?, ?)", (mission_id, task_name, deadline))
+        conn.commit()
+
+    await update.message.reply_text(f"✅ Tarea '{task_name}' agregada a '{mission_name}'. Fecha límite: {deadline}")
+
+# Función para completar una tarea
+async def complete_task(update: Update, context: CallbackContext):
+    user_id = update.message.chat_id
+    task_name = " ".join(context.args)
+    if not task_name:
+        await update.message.reply_text("⚠️ Uso: /completar_tarea <nombre>")
+        return
+
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, xp FROM tasks WHERE task = ? AND status = 'pendiente'", (task_name,))
+        task = cursor.fetchone()
+        if not task:
+            await update.message.reply_text("⚠️ No encontré esa tarea pendiente.")
+            return
+
+        task_id, xp = task
+        cursor.execute("UPDATE tasks SET status = 'completado' WHERE id = ?", (task_id,))
+        cursor.execute("UPDATE users SET xp = xp + ? WHERE user_id = ?", (xp, user_id))
+        conn.commit()
+
+    await update.message.reply_text(f"✅ Tarea '{task_name}' completada. +{xp} XP.")
+
+# Función automática para actualizar tareas a 'zombie' si expiran
+def update_task_status():
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.cursor()
+        now = datetime.datetime.now().isoformat()
+        cursor.execute("UPDATE tasks SET status = 'zombie' WHERE deadline < ? AND status = 'pendiente'", (now,))
+        conn.commit()
+
+# Programar la revisión automática cada 24 horas
+import threading
+def schedule_task_update():
+    update_task_status()
+    threading.Timer(86400, schedule_task_update).start()
+
+schedule_task_update()
+
 
 if __name__ == "__main__":
     app = Application.builder().token(TOKEN).build()
@@ -188,4 +317,8 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("completar_mision", complete_mission))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("status", status))
+    app.add_handler(CommandHandler("agregar_tarea", add_task))
+    app.add_handler(CommandHandler("completar_tarea", complete_task))
+
     app.run_polling()
