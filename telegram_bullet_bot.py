@@ -68,10 +68,12 @@ def init_db():
             task TEXT,
             xp INTEGER DEFAULT 10,
             status TEXT DEFAULT 'pendiente',
+            deadline TEXT DEFAULT NULL,
             FOREIGN KEY (mission_id) REFERENCES missions(id)
         )""")
-
         conn.commit()
+
+# fin de la funcion de creacion de tablas
 
 # Función para agregar un área de vida (ciudad)
 async def add_area(update: Update, context: CallbackContext):
